@@ -1,53 +1,84 @@
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Scanner;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Urna {
-    public static void main(String[] args) {
-        
-        Scanner in = new Scanner(System.in);
+    
+    private HashMap<String, Candidato> candidatos = new HashMap<String, Candidato>();
+    private int votos = 0;
 
-        String[][] cadastrosCandidatos = new String[2][5];
-        int[] votos = new int[5];
-        int quantidadeVotos = 0;
-        
-        for(int i = 0; i<5;i++){
-            System.out.printf("Digite o nome e o número do %dº candidato separados por vírgula: ", i+1);
-            String[] res = (in.nextLine()).split(",");
-            cadastrosCandidatos[0][i] = res[0].trim();
-            cadastrosCandidatos[1][i] = res[1].trim();
-            votos[i] = 0;
+    public boolean adicionaCandidato(String nome, String numero){
+        if(!candidatos.containsKey(numero)){
+            this.candidatos.put(numero, new Candidato(nome, numero));
+            limpaTelaUrna();
+            return true;
+        }else{
+            System.out.println("Não pode existir mais de um candidato com mesmo número.");
+            return false;
         }
-
-        int voto = 0;
-        while(voto != -1){
-            System.out.println("Relação de candidatos:");
-            for(int i = 0; i < 5; i++) {
-                System.out.printf("%s-%s\n", cadastrosCandidatos[1][i], cadastrosCandidatos[0][i]);
-            }
-            System.out.print("Digite o numero do seu candidado ou -1 para finalizar a votação: ");
-            voto = in.nextInt();
-            if(voto != -1){
-                int candidato = Arrays.asList(cadastrosCandidatos[1]).indexOf(String.valueOf(voto));
-                if(candidato == -1){
-                    System.out.println("Candidato não existente, repita o voto.");
-                }else{
-                    votos[candidato] += 1;
-                    quantidadeVotos++;
-                }
-            }
-        }
-
-        for(int i = 0; i<5;i++){
-            System.out.printf("%s - %d\n", cadastrosCandidatos[0][i], votos[i]);
-        }
-
-        int[] votosOrdenados = votos;
-        Arrays.sort(votosOrdenados);
-
-        System.out.println(Arrays.toString(votosOrdenados));
-
-        in.close();
-
     }
+
+    public void votar(String numero){
+        if(this.candidatos.containsKey(numero)){
+            this.candidatos.get(numero).adicionaVoto();
+            votos ++;
+            limpaTelaUrna();
+        }else
+            System.out.println("O numero digitado não pertence a nenhum candidato");
+    }
+    
+    public void exibeCandidatos(){
+        candidatos.forEach(
+            (numero, candidato)->System.out.printf("%s - %s\n", candidato.getNumero(), candidato.getNome())
+        );
+        System.out.print("Digite o número do candidato escolhido ou -1 para encerrar a votação: ");
+    }
+    
+    public void exibeResultado(){
+        System.out.printf("Foram contabilizados %d votos.", this.votos);
+        candidatos.forEach((numero, candidato)->System.out.println(candidato.toString()));
+    }    
+        
+    public Candidato computaVotos(){
+        Candidato vencedor = new Candidato(null, null);
+        for (Map.Entry<String, Candidato> candidato : this.candidatos.entrySet()) {
+            if(candidato.getValue().contaVotos() > vencedor.contaVotos())
+                vencedor = candidato.getValue();
+        }
+
+        if(vencedor.contaVotos() >= (float) this.votos/2){
+            exibeResultado();
+            return vencedor;
+        }else{
+            exibeResultado();
+            return null;
+        }
+    }
+
+    public Urna urnaSegundoTurno(){
+
+        Urna urnaSegundoTurno = new Urna();
+
+        Candidato candidatoAux = new Candidato(null, null);
+        Candidato candidatoAux2 = new Candidato(null, null);
+
+        for(int i = 0; i < 2; i++){
+            for (Map.Entry<String, Candidato> candidato : this.candidatos.entrySet()) {
+                if(candidato.getValue().contaVotos() > candidatoAux.contaVotos())
+                    candidatoAux = candidato.getValue();
+                if(candidatoAux.getNumero() != null && candidato.getValue().getNumero() != candidatoAux.getNumero() && candidato.getValue().contaVotos() > candidatoAux2.contaVotos())
+                    candidatoAux2 = candidato.getValue();
+            }
+            urnaSegundoTurno.adicionaCandidato(candidatoAux.getNome(), candidatoAux.getNumero());
+            if(candidatoAux2.getNumero() != null)
+                urnaSegundoTurno.adicionaCandidato(candidatoAux2.getNome(), candidatoAux2.getNumero());
+        }
+
+        return urnaSegundoTurno;
+    }
+
+    private void limpaTelaUrna(){
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
+    }
+
 }
